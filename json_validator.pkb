@@ -9,26 +9,12 @@ create or replace package body json_validator is
    revisions:
    Ver        Date        Author
    ---------  ----------  ------------------------------
-   1.0        20/10/2015  Khisamutdinov Radik Damirovich
+   1.1        25/04/2017  Khisamutdinov Radik Damirovich
   ******************************************************************************/
   
   /******************************************************************************
-          This program is published under the GNU LGPL License 
-                  http://www.gnu.org/licenses/lgpl.html
-  *******************************************************************************
-   This program is free software: you can redistribute it and/or modify
-      it under the terms of the GNU General Public License as published by
-      the Free Software Foundation, either version 3 of the License, or
-      (at your option) any later version.
-
-      This program is distributed in the hope that it will be useful,
-      but WITHOUT ANY WARRANTY; without even the implied warranty of
-      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-      GNU General Public License for more details.
-
-      You should have received a copy of the GNU General Public License
-      along with this program.  If not, see <http://www.gnu.org/licenses/>.
-  ********************************************************************************/
+          This program is published under the MIT License
+  *******************************************************************************/
 
   /* @private
    * type for instantiate keys storages
@@ -37,7 +23,7 @@ create or replace package body json_validator is
 
   atCh integer; -- the index of the current character
   ch char;      -- the current character
-  text varchar2(32767);
+  text clob;
 
   /* @private
    * call error when something is wrong
@@ -45,11 +31,20 @@ create or replace package body json_validator is
   procedure error(m in varchar2 default '')
   is
     errmsg varchar2(32767);
+    len integer := 1400;
+    halfLen integer := len / 2;
+    pos integer;
   begin
+    pos := case when atCh > halfLen then atCh - halfLen else 1 end;
+    
     errmsg := 'name: SyntaxError, ';
     errmsg := errmsg || 'message: ' || m || ', ';
     errmsg := errmsg || 'at: ' || atCh || ', ';
-    errmsg := errmsg || 'text: ' || text;
+    errmsg := errmsg || 'text: ' || 
+                           (case when pos > 1 then '...' else '' end) || 
+                             substr(text, pos, len) || 
+                               (case when atCh + halfLen < dbms_lob.getlength(text) then '...' else '' end);
+    
     raise_application_error(-20000, errmsg);
   end;
 
@@ -461,6 +456,15 @@ create or replace package body json_validator is
    */
   function unsafety_validate(source in varchar2) return boolean
   is
+  begin
+    return unsafety_validate(to_clob(source));
+  end;           
+             
+  /* @public
+   * unsafety validate JSON string (throw exception ora-20000)
+   */
+  function unsafety_validate(source in clob) return boolean
+  is
     l_result boolean;
   begin
     text := source;
@@ -481,6 +485,15 @@ create or replace package body json_validator is
    * safety validate JSON string (catch all exceptions)
    */
   function safety_validate(source in varchar2) return boolean
+  is
+  begin
+    return safety_validate(to_clob(source));
+  end;           
+             
+  /* @public
+   * safety validate JSON string (catch all exceptions)
+   */
+  function safety_validate(source in clob) return boolean
   is
     l_result boolean;
   begin
@@ -506,6 +519,16 @@ create or replace package body json_validator is
    * safety validate JSON string (catch all exceptions with error message) 
    */
   function safety_validate(source in varchar2,
+                           errmsg in out varchar2) return boolean
+  is
+  begin
+    return safety_validate(to_clob(source), errmsg);
+  end;           
+             
+  /* @public
+   * safety validate JSON string (catch all exceptions with error message) 
+   */
+  function safety_validate(source in clob,
                            errmsg in out varchar2) return boolean
   is
     l_result boolean;
