@@ -9,7 +9,8 @@ create or replace package body json_validator is
    revisions:
    Ver        Date        Author
    ---------  ----------  ------------------------------
-   1.1        25/04/2017  Khisamutdinov Radik Damirovich
+   1.1        25/04/2017  Khisamutdinov Radik         Expanded API for working with CLOB values
+   1.2        28/04/2017  Khisamutdinov Radik         Bug fix in getting char from CLOB by index position
   ******************************************************************************/
   
   /******************************************************************************
@@ -23,6 +24,7 @@ create or replace package body json_validator is
 
   atCh integer; -- the index of the current character
   ch char;      -- the current character
+  lenText integer := 0;
   text clob;
 
   /* @private
@@ -102,10 +104,14 @@ create or replace package body json_validator is
   /* @private
    *  get char from string by index position
    */
-  function charAt(str in varchar2, pos in integer) return char
+  function charAt(pos in integer) return char
   is
   begin
-    return substr(str, pos, 1);
+    return 
+      case 
+        when pos > lenText then '' 
+        else substr(text, pos, 1) 
+      end;
   end;
 
   /* @private
@@ -167,7 +173,7 @@ create or replace package body json_validator is
     end if;
 
     -- when there are no more characters, return the empty string
-    ch := charAt(text, atCh);
+    ch := charAt(atCh);
     atCh := atCh + 1;
     return ch;
   end;
@@ -183,7 +189,7 @@ create or replace package body json_validator is
       error('Expected ''' || c || ''' instead of ''' || ch || '''');
     end if;
 
-    ch := charAt(text, atCh);
+    ch := charAt(atCh);
     atCh := atCh + 1;
   end;
 
@@ -468,6 +474,7 @@ create or replace package body json_validator is
     l_result boolean;
   begin
     text := source;
+    lenText := nvl(dbms_lob.getlength(text), 0);
     atCh := 1;
     ch := ' ';
     
@@ -498,6 +505,7 @@ create or replace package body json_validator is
     l_result boolean;
   begin
     text := source;
+    lenText := nvl(dbms_lob.getlength(text), 0);
     atCh := 1;
     ch := ' ';
     
