@@ -9,7 +9,8 @@ create or replace package json_validator is
    revisions:
    Ver        Date        Author
    ---------  ----------  -------------------
-   1.1        25/04/2017  Khisamutdinov Radik
+   1.1        25/04/2017  Khisamutdinov Radik         Expanded API for working with CLOB values
+   1.2        28/04/2017  Khisamutdinov Radik         Bug fix in getting char from CLOB by index position
   ******************************************************************************/
   
   /******************************************************************************
